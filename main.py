@@ -41,29 +41,25 @@ def save_entry():
     date = date_entry.get()
     mood = feeling_var.get()
     entry = journal_box.get("1.0", "end-1c")
-    
+
     if not date or not mood or not entry:
         print("Please fill in all fields.")
         return
 
     try:
-        # Connect to the database
         conn = sqlite3.connect("mood_journal.db")
         cursor = conn.cursor()
 
-
-        # Insert data into the journal table
         cursor.execute("INSERT INTO journal (date, mood, entry) VALUES (?, ?, ?)", (date, mood, entry))
-
-        # Commit changes
         conn.commit()
+        print("Entry saved!")
 
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
 
     finally:
-        # Close the connection
         conn.close()
+
 
 
 #Saving the entry
