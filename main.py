@@ -1,214 +1,196 @@
 import tkinter as tk
-from datetime import datetime 
+from tkinter import messagebox, simpledialog, Toplevel
 import sqlite3
+from datetime import datetime
+import os
 
+# --- Database Setup ---
+conn = sqlite3.connect("mood_journal.db")
+cursor = conn.cursor()
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS journal (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT,
+        mood TEXT,
+        entry TEXT
+    )
+""")
+cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password (
+        id INTEGER PRIMARY KEY,
+        pwd TEXT
+    )
+""")
+conn.commit()
 
-def say_hello():
+# --- Global variables ---
+editing_id = None
 
-    label.config(text="Hello, Tkinter!")
+# --- Password Setup ---
+def get_password():
+    cursor.execute("SELECT pwd FROM password WHERE id=1")
+    result = cursor.fetchone()
+    return result[0] if result else None
 
-# Create the main window
-root = tk.Tk()
-root.title("Mood Journal App")
-root.geometry("800x600")
+def set_password(pwd):
+    cursor.execute("DELETE FROM password")
+    cursor.execute("INSERT INTO password (id, pwd) VALUES (1, ?)" , (pwd,))
+    conn.commit()
 
-def create_db():
-# Connect to the database
-    conn = sqlite3.connect("mood_journal.db")
-    cursor = conn.cursor()
+def prompt_password():
+    saved_pwd = get_password()
+    if not saved_pwd:
+        new_pwd = simpledialog.askstring("Create Password", "Create a password:", show="*")
+        if new_pwd:
+            set_password(new_pwd)
+            messagebox.showinfo("Success", "Password created successfully.")
+        else:
+            root.destroy()
+    else:
+        for _ in range(3):
+            entered_pwd = simpledialog.askstring("Login", "Enter your password:", show="*")
+            if entered_pwd == saved_pwd:
+                return
+            else:
+                messagebox.showerror("Error", "Incorrect password.")
+        root.destroy()
 
-#Create table if it doesn't exist
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS journal (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT,
-            mood TEXT,
-            entry TEXT
-        )
-    """)
-
-    #Commit changes to the database
-    conn.commit()   
-
-    #Close the database connection
-    conn.close()
-
-#Run to create the database
-create_db()
-
-#Function to save date, mood, and entry to the database
+# --- Save Entry ---
 def save_entry():
-    date = date_entry.get()
-    mood = feeling_var.get()
-    entry = journal_box.get("1.0", "end-1c")
+    global editing_id
+    date = datetime.now().strftime("%Y-%m-%d")
+    mood = mood_var.get()
+    entry = journal_box.get("1.0", tk.END).strip()
 
-    if not date or not mood or not entry:
-        print("Please fill in all fields.")
+    if not mood or not entry:
+        messagebox.showwarning("Input Error", "Please select a mood and write something.")
         return
 
-    try:
-        conn = sqlite3.connect("mood_journal.db")
-        cursor = conn.cursor()
-
+    if editing_id:
+        cursor.execute("UPDATE journal SET mood=?, entry=? WHERE id=?", (mood, entry, editing_id))
+        messagebox.showinfo("Updated", "Your entry was updated.")
+        editing_id = None
+    else:
         cursor.execute("INSERT INTO journal (date, mood, entry) VALUES (?, ?, ?)", (date, mood, entry))
+        messagebox.showinfo("Saved", "Your mood entry was saved!")
+
+    conn.commit()
+    journal_box.delete("1.0", tk.END)
+    mood_var.set("")
+
+def edit_entry(entry_id, mood, text):
+    global editing_id
+    editing_id = entry_id
+    mood_var.set(mood)
+    journal_box.delete("1.0", tk.END)
+    journal_box.insert(tk.END, text)
+    root.lift()
+
+def delete_entry(entry_id):
+    if messagebox.askyesno("Delete", "Are you sure you want to delete this entry?"):
+        cursor.execute("DELETE FROM journal WHERE id=?", (entry_id,))
         conn.commit()
-        print("Entry saved!")
+        show_entries()
 
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+def show_entries():
+    view_win = Toplevel(root)
+    view_win.title("Previous Entries")
+    view_win.geometry("360x500")  # Set fixed size for the "Previous Entries" window
+    view_win.configure(bg="#f0f4f8")
 
-    finally:
-        conn.close()
+    canvas = tk.Canvas(view_win, bg="#f0f4f8", highlightthickness=0)
+    canvas.pack(side="left", fill="both", expand=True)
 
+    scrollbar = tk.Scrollbar(view_win, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
 
+    canvas.configure(yscrollcommand=scrollbar.set)
+    frame = tk.Frame(canvas, bg="#f0f4f8")
+    canvas.create_window((0, 0), window=frame, anchor="nw")
 
-#Saving the entry
-save_button = tk.Button(root, text="Save Entry", command=save_entry)
-save_button.grid(row=12, column=0, columnspan=2, pady=10)   
+    def on_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
 
-#Fetching data from the database
-def fetch_data():
-    try:
-        # Connect to the database
-        conn = sqlite3.connect("mood_journal.db")
-        cursor = conn.cursor()
+    frame.bind("<Configure>", on_configure)
 
-        # Fetch all data from the journal table
-        cursor.execute("SELECT * FROM journal")
-        data = cursor.fetchall()
+    cursor.execute("SELECT id, date, mood, entry FROM journal ORDER BY id DESC")
+    results = cursor.fetchall()
 
-        # Display the fetched data
-        for row in data:
-            print(row)
+    for entry_id, date, mood, entry in results:
+        card = tk.Frame(frame, bg="white", bd=1, relief="raised", padx=10, pady=5)
+        card.pack(fill="x", padx=5, pady=5)
 
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        tk.Label(card, text=f"{date} - {mood}", font=("Helvetica", 12, "bold"), bg="white").pack(anchor="w")
+        tk.Label(card, text=entry, wraplength=280, justify="left", font=("Helvetica", 11), bg="white").pack(anchor="w", pady=(0, 5))
 
-    finally:
-        # Close the connection
-        conn.close()
+        button_row = tk.Frame(card, bg="white")
+        button_row.pack(anchor="e")
 
-
-#Updating the entry
-update_button = tk.Button(root, text="Update Entry", command=fetch_data)
-update_button.grid(row=13, column=0, columnspan=2, pady=10)
-
-#Editing the entry
-edit_button = tk.Button(root, text="Edit Entry", command=fetch_data)
-edit_button.grid(row=14, column=0, columnspan=2, pady=10)   
-
-#Save changes
-save_changes_button = tk.Button(root, text="Save Changes", command=fetch_data)
-save_changes_button.grid(row=15, column=0, columnspan=2, pady=10)   
-
-#Update entry in the database
-def update_entry():
-    entry_id = entry_id_entry.get()
-    new_entry = new_entry_box.get("1.0", "end-1c")
-
-    try:
-        # Connect to the database
-        conn = sqlite3.connect("mood_journal.db")
-        cursor = conn.cursor()
-
-        # Update the entry in the journal table
-        cursor.execute("UPDATE journal SET entry = ? WHERE id = ?", (new_entry, entry_id))
-
-        # Commit changes
-        conn.commit()
-
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-
-    finally:
-        # Close the connection
-        conn.close()
-
-#Select and delete entry
-select_delete_button = tk.Button(root, text="Select and Delete Entry", command=update_entry)
-select_delete_button.grid(row=16, column=0, columnspan=2, pady=10)      
-
-#delete entry from the database
-def delete_entry():
-    entry_id = entry_id_entry.get()
-
-    try:
-        # Connect to the database
-        conn = sqlite3.connect("mood_journal.db")
-        cursor = conn.cursor()
-
-        # Delete the entry from the journal table
-        cursor.execute("DELETE FROM journal WHERE id = ?", (entry_id,))
-
-        # Commit changes
-        conn.commit()
-
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-
-    finally:
-        # Close the connection
-        conn.close()    
-
-#confirm delete entry(check)
-confirm_delete_button = tk.Button(root, text="Confirm Delete Entry", command=delete_entry)
-confirm_delete_button.grid(row=17, column=0, columnspan=2, pady=10) 
-
-# Format YYYY-MM-DD
-current_date = datetime.now().strftime("%Y-%m-%d")
-
-# Date label
-date_label = tk.Label(root, text="Date: ", font=("Arial", 12, "bold"))
-date_label.grid(row=0, column=0, pady=10, sticky="w")
-
-# Date entry
-date_entry = tk.Entry(root, font=("Arial", 12))
-date_entry.insert(0, current_date)
-date_entry.grid(row=0, column=1, pady=10)
-
-# Question label
-feeling_label = tk.Label(root, text="How are you feeling today?", font=("Arial", 24))
-feeling_label.grid(row=1, column=0, columnspan=2, pady=10)
-
-# Feeling list
-feelings = ["Happy", "Angry", "Sad", "Excited", "Relaxed", "Stressed"]
-
-# Journal label
-journal_label = tk.Label(root, text="Journal Entry:", font=("Arial", 12, "bold"))
-journal_label.grid(row=2, column=0, pady=10, sticky="w")
-
-# Journal Entry
-journal_box = tk.Text(root, height=5, width=30, font=("Arial", 12))
-journal_box.grid(row=3, column=0, columnspan=2, pady=10)
-
-# Function to get text from textbox
-def get_text():
-    text = journal_box.get("1.0", "end-1c")
-    print(text)
-
-# Function to handle feeling selection
-def show_response(feeling):
-    result_label.config(text=f"You selected: {feeling}")
-
-# Create a frame for the buttons and add them to the grid
-feeling_var = tk.StringVar()
-
-for idx, item in enumerate(feelings):
-    btn = tk.Radiobutton(root, text=item, variable=feeling_var, value=item, command=lambda feeling=item: show_response(feeling))
-    btn.grid(row=4 + idx, column=0, pady=5, sticky="w")
+        tk.Button(button_row, text="✏️ Edit", command=lambda e=entry_id, m=mood, t=entry: edit_entry(e, m, t),
+                  font=("Helvetica", 10), bg="#4CAF50", fg="white", padx=5).pack(side="left", padx=2)
+        tk.Button(button_row, text="🗑️ Delete", command=lambda e=entry_id: delete_entry(e),
+                  font=("Helvetica", 10), bg="#f44336", fg="white", padx=5).pack(side="left", padx=2)
 
 
-# Create a label to display the selected feeling
-result_label = tk.Label(root, text="", font=("Arial", 16))
-result_label.grid(row=10, column=0, columnspan=2, pady=10)
+# --- GUI Setup ---
+root = tk.Tk()
+root.withdraw()
+prompt_password()
+root.deiconify()
 
-# Add the "Enter Mood" button
-button = tk.Button(root, text="Enter Mood", command=say_hello)
-button.grid(row=11, column=0, columnspan=2, pady=10)
+bg_color = "#f0f4f8"
+primary_color = "#4a90e2"
+accent_color = "#50e3c2"
+font_family = "Helvetica"
 
-# Add a label for feedback
-label = tk.Label(root, text="")
-label.grid(row=12, column=0, columnspan=2)
+root.title("Mood Journal")
+root.geometry("360x640")
+root.configure(bg=bg_color)
+root.resizable(False, False)
 
-# Run the app
+header = tk.Frame(root, bg=primary_color, height=80)
+header.pack(fill="x")
+tk.Label(header, text="Mood Journal", font=(font_family, 20, "bold"), bg=primary_color, fg="white").pack(pady=20)
+
+def change_password():
+    old_pwd = simpledialog.askstring("Change Password", "Enter current password:", show="*")
+    if old_pwd != get_password():
+        messagebox.showerror("Error", "Incorrect current password.")
+        return
+    new_pwd = simpledialog.askstring("New Password", "Enter new password:", show="*")
+    if new_pwd:
+        set_password(new_pwd)
+        messagebox.showinfo("Success", "Password changed successfully.")
+
+button_frame = tk.Frame(root, bg=bg_color)
+button_frame.pack(pady=10)
+
+view_btn = tk.Button(button_frame, text="📖 View Entries", command=show_entries,
+                     font=(font_family, 11), bg=accent_color, fg="black", padx=10, pady=5)
+view_btn.grid(row=0, column=0, padx=10)
+
+pwd_btn = tk.Button(button_frame, text="🔒 Change Password", command=change_password,
+                    font=(font_family, 11), bg=accent_color, fg="black", padx=10, pady=5)
+pwd_btn.grid(row=0, column=1, padx=10)
+
+main = tk.Frame(root, bg=bg_color)
+main.pack(padx=20, pady=10, fill="both", expand=False)
+
+tk.Label(main, text="How are you feeling today?", font=(font_family, 14), bg=bg_color, fg="#333").pack(anchor="w", pady=(0, 10))
+
+moods = ["😊 Happy", "😠 Angry", "😢 Sad", "🤩 Excited", "😌 Relaxed", "😫 Stressed"]
+mood_var = tk.StringVar()
+
+for mood in moods:
+    tk.Radiobutton(main, text=mood, variable=mood_var, value=mood,
+                   font=(font_family, 12), bg=bg_color, anchor="w", indicatoron=0,
+                   width=25, pady=5, fg="#444", selectcolor=accent_color).pack(pady=2)
+
+tk.Label(main, text="Journal Entry:", font=(font_family, 14, "bold"), bg=bg_color, fg="#333").pack(anchor="w", pady=(20, 5))
+journal_box = tk.Text(main, height=4, width=35, font=(font_family, 11), wrap="word", bd=2, relief="groove")
+journal_box.pack()
+
+tk.Button(main, text="Save Entry", command=save_entry, font=(font_family, 13, "bold"),
+          bg=primary_color, fg="white", padx=10, pady=5).pack(pady=10)
+
 root.mainloop()
