@@ -192,6 +192,14 @@ def create_analytics_dashboard():
     #Tab 4: Data export/import
     create_data_tab(notebook, df)
     
+#Summary statistics tab
+def create_summary_tab(notebook, df):
+    summary_frame = tk.Frame(notebook, bg="#f0f4f8")
+    notebook.add(summary_frame, text="Summary ")
+    
+    
+
+    
 # --- GUI Setup ---
 root = tk.Tk()
 root.withdraw()
