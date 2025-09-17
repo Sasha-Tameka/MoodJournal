@@ -1,8 +1,18 @@
 import tkinter as tk
-from tkinter import messagebox, simpledialog, Toplevel
+from tkinter import messagebox, simpledialog, Toplevel, filedialog, ttk
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+import pandas as pd
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import seaborn as sns
+from collections import Counter
+import numpy as np
+
+#Set style for better plots
+plt.style.use('seaborn-v0_8')
+sns.set_palette("husl")
 
 # --- Database Setup ---
 conn = sqlite3.connect("mood_journal.db")
@@ -21,6 +31,7 @@ cursor.execute("""
         pwd TEXT
     )
 """)
+
 conn.commit()
 
 # --- Global variables ---
