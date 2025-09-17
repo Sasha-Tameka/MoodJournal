@@ -65,6 +65,26 @@ def prompt_password():
             else:
                 messagebox.showerror("Error", "Incorrect password.")
         root.destroy()
+        
+# Data loading function
+
+def load_data_to_dataframe():
+# load journal data into pandas DataFrame
+    cursor.execute("SELECT id, date, mood, entry FROM joournal ORDER BY date")
+    data = cursor.fetchall()
+    
+    if not data:
+        return pd.DataFrame()
+    
+    df = pd.DataFrame(data, columns=["id", "date", "mood", "entry"])
+    df["date"] = pd.to_datetime(df["date"])
+    df['entry_length'] = df['entry'].str.len()
+    df['mood_clean'] = df['mood'].str.replace(r'[^\w\s]', '', regex=True.str.strip())
+    df['day_of_week'] = df['date'].dt.day_name()
+    df['month'] = df['date'].dt.month_name()
+    df['week'] = df['date'].dt.to_period('W')
+    return df
+
 
 # --- Save Entry ---
 def save_entry():
