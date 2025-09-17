@@ -197,6 +197,18 @@ def create_summary_tab(notebook, df):
     summary_frame = tk.Frame(notebook, bg="#f0f4f8")
     notebook.add(summary_frame, text="Summary ")
     
+    #Left side
+    left_frame = tk.Frame(summary_frame, bg="#f0f4f8")
+    left_frame.pack(side="left", fill="both", padx=10, pady=10)
+    
+   #calculate statistics
+   total_entries = len(df)
+   date_range = f"{df['date'].min().strftime('%Y-%m-%d')} to {df['date'].max().strftime('%Y-%m-%d')}"
+   avg_entry_length = df['entry_lenght'].mean()
+   longest_entry = df['entry_length'].max()
+   shortest_entry = df['entry_length'].min()
+   most_common_mood = df['mood_clean'].mode().iloc[0] if not df ['mood_clean'].empty else "N/A"
+    
     
 
     
