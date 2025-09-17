@@ -180,7 +180,8 @@ def create_analytics_dashboard():
     notebook = ttk.Notebook(analytics_window)
     notebook.pack(fill="both", expand=True, padx=10, pady=10)
     
-    
+    #Tab 1: Summary statistics
+    create_summary_tab(notebook, df)
 # --- GUI Setup ---
 root = tk.Tk()
 root.withdraw()
