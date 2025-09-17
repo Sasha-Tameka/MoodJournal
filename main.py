@@ -126,7 +126,7 @@ def delete_entry(entry_id):
 def show_entries():
     view_win = Toplevel(root)
     view_win.title("Previous Entries")
-    view_win.geometry("360x500")  # Set fixed size for the "Previous Entries" window
+    view_win.geometry("360x500")  
     view_win.configure(bg="#f0f4f8")
 
     canvas = tk.Canvas(view_win, bg="#f0f4f8", highlightthickness=0)
@@ -162,6 +162,15 @@ def show_entries():
         tk.Button(button_row, text="🗑️ Delete", command=lambda e=entry_id: delete_entry(e),
                   font=("Helvetica", 10), bg="#f44336", fg="white", padx=5).pack(side="left", padx=2)
 
+#Analytics Dashboard
+def create_analytics_dashboard():
+    df = load_data_to_dataframe()
+    
+    if df.empty:
+        messagebox.showinfo("No Data", "No journal entries found for analysis.")
+        return
+
+    # Perform data analysis and create analytics dashboard
 
 # --- GUI Setup ---
 root = tk.Tk()
