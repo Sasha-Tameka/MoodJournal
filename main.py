@@ -189,6 +189,9 @@ def create_analytics_dashboard():
     #Tab 3: Pattern Detection
     create_patterns_tab(notebook, df)
     
+    #Tab 4: Data export/import
+    create_data_tab(notebook, df)
+    
 # --- GUI Setup ---
 root = tk.Tk()
 root.withdraw()
