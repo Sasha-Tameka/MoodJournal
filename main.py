@@ -176,10 +176,11 @@ def create_analytics_dashboard():
     analytics_window.geometry("1000x700")
     analytics_window.configure(bg="#f0f4f8")
     
-    #Mood Analysis
-    mood_analysis_frame = tk.Frame(analytics_window, bg="#f0f4f8")
-    mood_analysis_frame.pack(padx=20, pady=20)
-
+    #Notebook for tabs
+    notebook = ttk.Notebook(analytics_window)
+    notebook.pack(fill="both", expand=True, padx=10, pady=10)
+    
+    
 # --- GUI Setup ---
 root = tk.Tk()
 root.withdraw()
