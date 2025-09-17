@@ -182,6 +182,9 @@ def create_analytics_dashboard():
     
     #Tab 1: Summary statistics
     create_summary_tab(notebook, df)
+    
+    #Tab 2: Mood Trends
+    create_trends_tab(notebook, df)
 # --- GUI Setup ---
 root = tk.Tk()
 root.withdraw()
