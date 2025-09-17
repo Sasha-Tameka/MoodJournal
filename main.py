@@ -170,7 +170,15 @@ def create_analytics_dashboard():
         messagebox.showinfo("No Data", "No journal entries found for analysis.")
         return
 
-    # Perform data analysis and create analytics dashboard
+    #Analytics window
+    analytics_window = tk.Toplevel(root)
+    analytics_window.title("Mood Analytics Dashboard")
+    analytics_window.geometry("1000x700")
+    analytics_window.configure(bg="#f0f4f8")
+    
+    #Mood Analysis
+    mood_analysis_frame = tk.Frame(analytics_window, bg="#f0f4f8")
+    mood_analysis_frame.pack(padx=20, pady=20)
 
 # --- GUI Setup ---
 root = tk.Tk()
